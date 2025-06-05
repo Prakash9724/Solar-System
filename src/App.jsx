@@ -111,9 +111,21 @@ const OrbitRing = ({ distance }) => {
 };
 
 // PlanetGLB component for loading 3D models
-const PlanetGLB = ({ name, modelPath, position, scale }) => {
+const PlanetGLB = ({ name, modelPath, position, scale, rotationSpeed = 0.5, fixMaterial = false, fixColor = '#fff' }) => {
   const { scene } = useGLTF(modelPath);
   const planetRef = useRef();
+  
+  // Fix material if needed (for Saturn/Uranus)
+  useEffect(() => {
+    if (fixMaterial && planetRef.current) {
+      planetRef.current.traverse((child) => {
+        if (child.isMesh) {
+          child.material.color.set(fixColor);
+          child.material.needsUpdate = true;
+        }
+      });
+    }
+  }, [fixMaterial, fixColor]);
   
   // Apply some rotation to make planets more visible
   useFrame((state, delta) => {
@@ -123,6 +135,8 @@ const PlanetGLB = ({ name, modelPath, position, scale }) => {
         planetRef.current.rotation.x = Math.random() * 0.5;
         planetRef.current.userData.initialized = true;
       }
+      // Planet rotation speed
+      planetRef.current.rotation.y += delta * rotationSpeed;
     }
   });
   
@@ -140,7 +154,7 @@ const PlanetGLB = ({ name, modelPath, position, scale }) => {
 };
 
 // Naya component: RevolvingPlanetGroup
-function RevolvingPlanetGroup({ planet, speed = 0.2 }) {
+function RevolvingPlanetGroup({ planet, speed = 0.5 }) {
   const groupRef = useRef();
   useFrame((state, delta) => {
     if (groupRef.current) {
@@ -151,6 +165,19 @@ function RevolvingPlanetGroup({ planet, speed = 0.2 }) {
       groupRef.current.position.set(x, 0, z);
     }
   });
+  // Saturn/Uranus ke liye alag rotationSpeed aur material fix
+  let rotationSpeed = 0.8;
+  let fixMaterial = false;
+  let fixColor = '#b5e0ff'; // Uranus ke liye halka blue, Saturn ke liye yellowish
+  if (planet.name === 'Uranus') {
+    rotationSpeed = 0.2;
+    fixMaterial = true;
+    fixColor = '#b5e0ff';
+  }
+  if (planet.name === 'Saturn') {
+    fixMaterial = true;
+    fixColor = '#ffe29a';
+  }
   return (
     <group ref={groupRef}>
       <PlanetGLB
@@ -158,6 +185,9 @@ function RevolvingPlanetGroup({ planet, speed = 0.2 }) {
         modelPath={planet.modelPath}
         position={[0, 0, 0]}
         scale={planet.scale}
+        rotationSpeed={rotationSpeed}
+        fixMaterial={fixMaterial}
+        fixColor={fixColor}
       />
     </group>
   );
@@ -181,10 +211,10 @@ const App = () => {
     { name: 'Venus', distance: 7, scale: [0.015, 0.015, 0.015], initialAngle: Math.PI / 4, modelPath: '/src/assets/Planets/venus.glb' },
     { name: 'Earth', distance: 10, scale: [0.017, 0.017, 0.017], initialAngle: Math.PI / 2, modelPath: '/src/assets/Planets/earth_and_clouds.glb' },
     { name: 'Mars', distance: 13, scale: [0.012, 0.012, 0.012], initialAngle: 3 * Math.PI / 4, modelPath: '/src/assets/Planets/mars.glb' },
-    { name: 'Jupiter', distance: 18, scale: [0.035, 0.035, 0.035], initialAngle: Math.PI, modelPath: '/src/assets/Planets/jupiter.glb' },
-    { name: 'Saturn', distance: 23, scale: [0.03, 0.03, 0.03], initialAngle: 5 * Math.PI / 4, modelPath: '/src/assets/Planets/saturn.glb' },
-    { name: 'Uranus', distance: 28, scale: [0.02, 0.02, 0.02], initialAngle: 3 * Math.PI / 2, modelPath: '/src/assets/Planets/uranus.glb' },
-    { name: 'Neptune', distance: 33, scale: [0.019, 0.019, 0.019], initialAngle: 7 * Math.PI / 4, modelPath: '/src/assets/Planets/neptune.glb' },
+    { name: 'Jupiter', distance: 22, scale: [0.055, 0.055, 0.055], initialAngle: Math.PI, modelPath: '/src/assets/Planets/jupiter.glb' },
+    { name: 'Saturn', distance: 35, scale: [0.03, 0.03, 0.03], initialAngle: 5 * Math.PI / 4, modelPath: '/src/assets/Planets/saturn.glb' },
+    { name: 'Uranus', distance: 55, scale: [0.02, 0.02, 0.02], initialAngle: 3 * Math.PI / 2, modelPath: '/src/assets/Planets/uranus.glb' },
+    { name: 'Neptune', distance: 70, scale: [0.019, 0.019, 0.019], initialAngle: 7 * Math.PI / 4, modelPath: '/src/assets/Planets/neptune.glb' },
   ];
 
   return (
@@ -222,7 +252,7 @@ const App = () => {
           rotateSpeed={0.3}
           zoomSpeed={0.5}
           minDistance={5}
-          maxDistance={20}
+          maxDistance={120} // ab aur zoom out kar sakte ho
           autoRotate 
           autoRotateSpeed={0.1}
         />
